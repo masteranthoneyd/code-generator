@@ -1,0 +1,25 @@
+/target/
+/logs/
+/.idea*
+
+.idea
+*.iml
+*.ipr
+*.iws
+/out
+
+# Eclipse Project files
+.classpath
+.project
+.settings/
+
+
+
+.DS_Store
+Thumbs.db
+
+*.bak
+*.tem
+*.temp
+#.swp
+*.log
