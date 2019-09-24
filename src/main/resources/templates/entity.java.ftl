@@ -12,6 +12,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 </#if>
+<#if table.indexInfos?size gt 0>
+import com.youngbingdong.redisoper.core.metadata.annotation.RedisIndex;
+</#if>
+import com.youngbingdong.redisoper.core.metadata.annotation.RedisPrimaryKey;
 
 /**
  * <p>
@@ -47,6 +51,10 @@ public class ${entity} implements Serializable {
 <#if entitySerialVersionUID>
     private static final long serialVersionUID = 1L;
 </#if>
+
+<#list table.indexInfos as indexInfo>
+    public static final String ${indexInfo.indexName?upper_case} = "${indexInfo.indexName}";
+</#list>
 <#-- ----------  BEGIN 字段循环遍历  ---------->
 <#list table.fields as field>
     <#if field.keyFlag>
@@ -89,6 +97,13 @@ public class ${entity} implements Serializable {
     <#-- 逻辑删除注解 -->
     <#if (logicDeleteFieldName!"") == field.name>
     @TableLogic
+    </#if>
+    <#-- Redis集成 -->
+    <#if field.keyFlag>
+    @RedisPrimaryKey
+    </#if>
+    <#if field.index>
+    @RedisIndex(name = ${field.indexName?upper_case}<#if field.unique>, unique = true</#if><#if (field.indexOrder>0)>, order = ${field.indexOrder}</#if>)
     </#if>
     private ${field.propertyType} ${field.propertyName};
 </#list>

@@ -54,6 +54,11 @@ public class TableInfo {
     private List<TableField> commonFields;
     private String fieldNames;
 
+    /**
+     * 索引信息
+     */
+    private List<IndexInfo> indexInfos;
+
     public TableInfo setConvert(boolean convert) {
         this.convert = convert;
         return this;

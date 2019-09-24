@@ -15,6 +15,7 @@ import ${superMapperClassPackage};
 interface ${table.mapperName} : ${superMapperClass}<${entity}>
 <#else>
 public interface ${table.mapperName} extends ${superMapperClass}<${entity}> {
-
+    /* !!!TUPLE_MARK_START!!! */
+    /* !!!TUPLE_MARK_END!!! */
 }
 </#if>

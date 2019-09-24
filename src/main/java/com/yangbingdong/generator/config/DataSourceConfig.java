@@ -213,4 +213,8 @@ public class DataSourceConfig {
         }
         return conn;
     }
+
+    public String getCatalog() {
+        return url.substring(url.lastIndexOf("/") + 1, url.indexOf("?"));
+    }
 }

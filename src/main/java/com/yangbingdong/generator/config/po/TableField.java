@@ -47,10 +47,17 @@ public class TableField {
     private IColumnType columnType;
     private String comment;
     private String fill;
+
+    private String capitalName;
     /**
      * 自定义查询字段列表
      */
     private Map<String, Object> customMap;
+
+    private boolean index;
+    private boolean unique;
+    private int indexOrder;
+    private String indexName;
 
     public TableField setConvert(boolean convert) {
         this.convert = convert;
@@ -95,6 +102,9 @@ public class TableField {
      * 按JavaBean规则来生成get和set方法
      */
     public String getCapitalName() {
+        if (capitalName != null) {
+            return capitalName;
+        }
         if (propertyName.length() <= 1) {
             return propertyName.toUpperCase();
         }
@@ -108,6 +118,7 @@ public class TableField {
             && Character.isUpperCase(setGetName.substring(1, 2).toCharArray()[0])) {
             return firstChar.toLowerCase() + setGetName.substring(1);
         }
-        return firstChar.toUpperCase() + setGetName.substring(1);
+        capitalName = firstChar.toUpperCase() + setGetName.substring(1);
+        return capitalName;
     }
 }

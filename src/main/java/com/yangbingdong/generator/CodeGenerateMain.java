@@ -2,13 +2,16 @@ package com.yangbingdong.generator;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.yangbingdong.generator.config.DataSourceConfig;
+import com.yangbingdong.generator.config.FileOutConfig;
 import com.yangbingdong.generator.config.GlobalConfig;
 import com.yangbingdong.generator.config.ITypeConvert;
 import com.yangbingdong.generator.config.PackageConfig;
 import com.yangbingdong.generator.config.StrategyConfig;
 import com.yangbingdong.generator.config.TemplateConfig;
 import com.yangbingdong.generator.config.po.TableFill;
+import com.yangbingdong.generator.config.po.TableInfo;
 import com.yangbingdong.generator.config.rules.DbColumnType;
 import com.yangbingdong.generator.config.rules.NamingStrategy;
 import com.yangbingdong.generator.engine.FreemarkerTemplateEngine;
@@ -27,7 +30,7 @@ import static com.baomidou.mybatisplus.annotation.IdType.INPUT;
  * <p>
  * 代码生成器配置 https://mp.baomidou.com/config/generator-config.html#%E5%9F%BA%E6%9C%AC%E9%85%8D%E7%BD%AE
  */
-public class CodeGenerate {
+public class CodeGenerateMain {
 
     private final static String AUTHOR = "yangbingdong";
     private final static String OUTPUT_DIR = "/home/ybd/data/git-repo/github/own/alchemist/example/src/main";
@@ -52,31 +55,30 @@ public class CodeGenerate {
                      .setDataSource(getDataSourceConfig())
                      .setStrategy(getStrategyConfig())
                      .setCfg(getFileOutConfig())
-                     .setTemplate(new TemplateConfig().setXml(null).setController(null).setEntityKt(null).setMapper(null).setService(null).setServiceImpl(null))
+                     .setTemplate(new TemplateConfig().setXml(null).setController(null))
                      .setGlobalConfig(getGlobalConfig());
         autoGenerator.execute();
     }
 
     private static InjectionConfig getFileOutConfig() {
         // 自定义xml输出目录配置
-        // InjectionConfig cfg = new InjectionConfig() {
-        //     @Override
-        //     public void initMap() {
-        //         /*Map<String, Object> map = new HashMap<>();
-        //         map.put("abc", this.getConfig().getGlobalConfig().getAuthor() + "-mp");
-        //         this.setMap(map);*/
-        //     }
-        // };
-        // List<FileOutConfig> focList = new ArrayList<>();
-        // focList.add(new FileOutConfig("/templates/mapper.xml.ftl") {
-        //     @Override
-        //     public String outputFile(TableInfo tableInfo) {
-        //         return OUTPUT_DIR + "/resources/mapper/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
-        //     }
-        // });
-        // cfg.setFileOutConfigList(focList);
-        // return cfg;
-        return null;
+        InjectionConfig cfg = new InjectionConfig() {
+            @Override
+            public void initMap() {
+                /*Map<String, Object> map = new HashMap<>();
+                map.put("abc", this.getConfig().getGlobalConfig().getAuthor() + "-mp");
+                this.setMap(map);*/
+            }
+        };
+        List<FileOutConfig> focList = new ArrayList<>();
+        focList.add(new FileOutConfig("/templates/mapper.xml.ftl") {
+            @Override
+            public String outputFile(TableInfo tableInfo) {
+                return OUTPUT_DIR + "/resources/mapper/" + tableInfo.getEntityName() + "Mapper" + StringPool.DOT_XML;
+            }
+        });
+        cfg.setFileOutConfigList(focList);
+        return cfg;
     }
 
     private static GlobalConfig getGlobalConfig() {

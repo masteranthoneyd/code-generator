@@ -27,25 +27,34 @@ import com.yangbingdong.generator.config.INameConvert;
 import com.yangbingdong.generator.config.PackageConfig;
 import com.yangbingdong.generator.config.StrategyConfig;
 import com.yangbingdong.generator.config.TemplateConfig;
+import com.yangbingdong.generator.config.po.IndexInfo;
 import com.yangbingdong.generator.config.po.TableField;
 import com.yangbingdong.generator.config.po.TableFill;
 import com.yangbingdong.generator.config.po.TableInfo;
 import com.yangbingdong.generator.config.querys.H2Query;
 import com.yangbingdong.generator.config.rules.NamingStrategy;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * 配置汇总 传递给文件生成工具
@@ -53,6 +62,7 @@ import java.util.Set;
  * @author YangHu, tangguo, hubin
  * @since 2016-08-30
  */
+@Slf4j
 public class ConfigBuilder {
 
     /**
@@ -108,6 +118,13 @@ public class ConfigBuilder {
      * 是否支持注释
      */
     private boolean commentSupported;
+    /**
+     * 库名
+     */
+    private String catalog;
+
+    private DatabaseMetaData metaData;
+
     /**
      * 在构造器中处理配置
      *
@@ -277,6 +294,17 @@ public class ConfigBuilder {
     private void handlerDataSource(DataSourceConfig config) {
         connection = config.getConn();
         dbQuery = config.getDbQuery();
+        catalog = config.getCatalog();
+        try {
+            metaData = connection.getMetaData();
+            log.info("/////////////////////// Code Generator ////////////////////////////\n" +
+                    "////// -> MySQL Version: " + metaData.getDatabaseProductVersion() + "\n" +
+                    "////// -> Driver Version: " + metaData.getDriverVersion() + "\n" +
+                    "////// -> Generating...............\n" +
+                    "/////////////////////// Code Generator ////////////////////////////\n");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
@@ -522,13 +550,60 @@ public class ConfigBuilder {
                 includeTableList = tableList;
             }
             // 性能优化，只处理需执行表字段 github issues/219
+            for (TableInfo info : includeTableList) {
+                Statement statement = connection.createStatement();
+                String ddlQuery = MessageFormat.format("SHOW CREATE TABLE {0}", info.getName());
+                ResultSet resultSet = statement.executeQuery(ddlQuery);
+                if (resultSet.next()) {
+                    String createTable = resultSet.getString("CREATE TABLE");
+                    log.info("/////////////////////// ↓ Create Table DDL ↓ ////////////////////////////\n\n" + createTable + "\n");
+                } else {
+                    throw new IllegalArgumentException("Not ddl found");
+                }
+            }
             includeTableList.forEach(ti -> convertTableFields(ti, config));
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return processTable(includeTableList, config.getNaming(), config);
+        processTable(includeTableList, config.getNaming(), config);
+        convertTableIndex(includeTableList);
+        return includeTableList;
     }
 
+    /**
+     * 处理索引信息
+     */
+    private void convertTableIndex(List<TableInfo> includeTableList) {
+        try {
+            for (TableInfo tableInfo : includeTableList) {
+                Map<String, IndexInfo> indexInfoMap = new HashMap<>(16);
+                Map<String, TableField> tableFieldMap = resolveToTableFieldMap(tableInfo);
+
+                ResultSet rs = metaData.getIndexInfo(catalog, null, tableInfo.getName(), false, true);
+                while (rs.next()) {
+                    String indexName = rs.getString("INDEX_NAME");
+                    if ("PRIMARY".equalsIgnoreCase(indexName)) {
+                        continue;
+                    }
+                    boolean unique = !rs.getBoolean("NON_UNIQUE");
+
+                    TableField field = tableFieldMap.get(rs.getString("COLUMN_NAME"));
+                    indexInfoMap.compute(indexName, (s, indexInfo) -> Optional.ofNullable(indexInfo)
+                                                                              .orElse(new IndexInfo(indexName, unique))
+                                                                              .addFieldInfo(field));
+                }
+                tableInfo.setIndexInfos(new ArrayList<>(indexInfoMap.values()));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Map<String, TableField> resolveToTableFieldMap(TableInfo tableInfo) {
+        return tableInfo.getFields()
+                        .stream()
+                        .collect(toMap(TableField::getName, identity()));
+    }
 
     /**
      * 表名匹配
